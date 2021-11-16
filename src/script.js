@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as dat from 'dat.gui';
+import gsap from 'gsap';
 
 // Texture Loader
 const textureLoader = new THREE.TextureLoader();
@@ -27,6 +28,14 @@ for (let i = 1; i < 6; i++) {
   img.position.set(Math.random() + 0.3, i * -1.8);
   scene.add(img);
 }
+
+let objs = [];
+
+scene.traverse((object) => {
+  if (object.isMesh) {
+    objs.push(object);
+  }
+});
 
 // Lights
 const pointLight = new THREE.PointLight(0xffffff, 0.1);
@@ -72,7 +81,7 @@ camera.position.y = 0;
 camera.position.z = 2;
 scene.add(camera);
 
-gui.add(camera.position, 'y').min(-10).max(0);
+gui.add(camera.position, 'y').min(-100).max(100);
 
 // Controls
 // const controls = new OrbitControls(camera, canvas)
@@ -88,7 +97,7 @@ renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 // Mouse
-let y = 0;
+let y = 0.1;
 let position = 0;
 
 const onMouseWheel = (e) => {
@@ -96,6 +105,13 @@ const onMouseWheel = (e) => {
 };
 
 window.addEventListener('wheel', onMouseWheel);
+
+const mouse = new THREE.Vector2();
+
+window.addEventListener('mousemove', (e) => {
+  mouse.x = (e.clientX / sizes.width) * 2 - 1;
+  mouse.y = -(e.clientY / sizes.height) * 2 + 1;
+});
 
 /**
  * Animate
@@ -111,7 +127,26 @@ const tick = () => {
   // Update objects
   position += y;
   y *= 0.95;
-  camera.position.y = position;
+
+  camera.position.y = -position;
+
+  // Raycaster
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(objs);
+
+  for (const intersect of intersects) {
+    gsap.to(intersect.object.scale, { x: 1.7, y: 1.7 });
+    gsap.to(intersect.object.rotation, { y: -0.5 });
+    gsap.to(intersect.object.position, { z: -0.9 });
+  }
+
+  for (const object of objs) {
+    if (!intersects.find((intersect) => intersect.object === object)) {
+      gsap.to(object.scale, { x: 1, y: 1 });
+      gsap.to(object.rotation, { y: 0 });
+      gsap.to(object.position, { z: 0 });
+    }
+  }
 
   // Update Orbital Controls
   // controls.update()
